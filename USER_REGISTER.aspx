@@ -594,7 +594,7 @@
 
                     <div class="card-footer text-muted" >
                     <div class=" d-flex w-100 justify-content-center align-items-center" style ="margin-top:20px;margin-bottom:20px">
-                        <asp:Button runat="server" ID="RegisterBtn" OnClick="RegisterBtn_Click" CssClass="btn-lg btn-primary btn-user" ClientIDMode="Static" Text="Register Account" AutoPostBack="false" Style="background: rgb(119,40,32); width: 40%;" />
+                        <asp:Button runat="server" ID="RegisterBtn" OnClick="RegisterBtn_Click" CssClass="btn-lg btn-primary btn-user" ClientIDMode="Static" ValidationGroup="Register" Text="Register Account" AutoPostBack="false" Style="background: rgb(119,40,32); width: 40%;" />
                     </div>
                    
                     <div class="text-center"><a class="small" href="Default.aspx">Already have an account? Login!</a></div>

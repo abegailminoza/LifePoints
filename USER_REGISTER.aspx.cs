@@ -6,6 +6,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Web;
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
@@ -40,71 +41,93 @@ namespace LifePoints
 
         protected void RegisterBtn_Click(object sender, EventArgs e)
         {
-            if(LName.CssClass.Contains("is-invalid") || FName.CssClass.Contains("is-invalid") || MName.CssClass.Contains("is-invalid") || Bloodtype.SelectedIndex == 0 ||
-                DOB.CssClass.Contains("is-invalid") || Bloodtype.CssClass.Contains("is-invalid") || Street.CssClass.Contains("is-invalid") ||
-                Baranggay.CssClass.Contains("is-invalid") || City.CssClass.Contains("is-invalid") || Province.CssClass.Contains("is-invalid") ||
-                Zip.CssClass.Contains("is-invalid") || Home.CssClass.Contains("is-invalid") || Mobile.CssClass.Contains("is-invalid") ||
-                Email.CssClass.Contains("is-invalid") || Password.CssClass.Contains("is-invalid") || RepeatPassword.CssClass.Contains("is-invalid"))
+
+            string pattern = @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$";
+            Regex check = new Regex(pattern);
+
+            //check if the password has at least 8 characters and contains special character.
+
+            if (Page.IsValid)
+            {
+                if (!check.IsMatch(Password.Text) && Password.Text.Length < 8)
+                {
+                    Response.Write("<script>alert('Password must be at least 8 characters long and contains at least one lowercase letter, one uppercase letter and one digit')</script>");
+                    return;
+                }
+                else
+                {
+                    Database_Connection db = new Database_Connection();
+                    //Register Account
+                    account acc = new account();
+                    acc.ACC_EMAIL = Email.Text;
+                    acc.ACC_PASSWORD = Password.Text;
+                    int res = db.RegisterAccount(acc);
+                    switch (res)
+                    {
+                        case -1:
+                            break;
+                        case -2:
+                            break;
+                        default: //Success
+                            acc.ACC_ID = res.ToString();
+
+
+                            //Insert User Info
+                            user_info ui = new user_info();
+                            ui.UI_ID = acc.ACC_ID;
+                            ui.UI_LNAME = LName.Text;
+                            ui.UI_FNAME = FName.Text;
+                            ui.UI_MNAME = MName.Text;
+                            ui.UI_GENDER = Gender.SelectedValue == "1";
+                            ui.UI_BTYPE = Bloodtype.SelectedValue;
+
+                            ui.UI_DOB = DOB.Text;
+                            ui.UI_HOME = Home.Text;
+                            ui.UI_MOBILE = Mobile.Text;
+
+                            //Convert Address to Json
+                            user_info_address ad = new user_info_address();
+                            ad.street = Street.Text;
+                            ad.baranggay = Baranggay.Text;
+                            ad.city = City.Text;
+                            ad.province = Province.Text;
+                            ad.zip = Zip.Text;
+
+                            ui.UI_ADDRESS = MySqlHelper.EscapeString(JsonConvert.SerializeObject(ad));
+
+                            if (db.InsertUserInfo(ui))
+                            {
+                                string query = string.Format(@"insert into activity_logs(ACT_DESCRIPTION, ACT_UACC_ID, ACT_UNAME)
+                                            select concat('User ', UI_FNAME, ' ', UI_LNAME, ' Register'), {0}, '{1}' from user_info
+                                            where UI_ID={2};", ui.UI_ID, ui.UI_FNAME + " " + ui.UI_LNAME, ui.UI_ID);
+
+
+                                bool logs = db.InsertToUserLogs(query);
+                                if (logs)
+                                {
+                                    Response.Write("<script>alert('Register Successful. Proceed with Login')</script>");
+                                    Response.Redirect("~/Default.aspx");
+                                }
+                            }
+                            break;
+
+                    }
+                }
+            }
+
+
+                if (LName.CssClass.Contains("is-invalid") && FName.CssClass.Contains("is-invalid") && MName.CssClass.Contains("is-invalid") && Bloodtype.SelectedIndex == 0 &&
+                DOB.CssClass.Contains("is-invalid") && Bloodtype.CssClass.Contains("is-invalid") && Street.CssClass.Contains("is-invalid") &&
+                Baranggay.CssClass.Contains("is-invalid") && City.CssClass.Contains("is-invalid") && Province.CssClass.Contains("is-invalid") &&
+                Zip.CssClass.Contains("is-invalid") && Home.CssClass.Contains("is-invalid") && Mobile.CssClass.Contains("is-invalid") &&
+                Email.CssClass.Contains("is-invalid") && Password.CssClass.Contains("is-invalid") && RepeatPassword.CssClass.Contains("is-invalid"))
             {
                 Response.Write("<script>alert('Please make sure all inputs are valid.')</script>");
             }
             else
             {
-                Database_Connection db = new Database_Connection();
-                //Register Account
-                account acc = new account();
-                acc.ACC_EMAIL = Email.Text;
-                acc.ACC_PASSWORD = Password.Text;
-                int res = db.RegisterAccount(acc);
-                switch (res)
-                {
-                    case -1:
-                        break;
-                    case -2:
-                        break;
-                    default: //Success
-                        acc.ACC_ID = res.ToString();
-
-
-                        //Insert User Info
-                        user_info ui = new user_info();
-                        ui.UI_ID = acc.ACC_ID;
-                        ui.UI_LNAME = LName.Text;
-                        ui.UI_FNAME = FName.Text;
-                        ui.UI_MNAME = MName.Text;
-                        ui.UI_GENDER = Gender.SelectedValue == "1";
-                        ui.UI_BTYPE = Bloodtype.SelectedValue;
-                       
-                        ui.UI_DOB = DOB.Text;
-                        ui.UI_HOME = Home.Text;
-                        ui.UI_MOBILE = Mobile.Text;
-
-                        //Convert Address to Json
-                        user_info_address ad = new user_info_address();
-                        ad.street = Street.Text;
-                        ad.baranggay = Baranggay.Text;
-                        ad.city = City.Text;
-                        ad.province = Province.Text;
-                        ad.zip = Zip.Text;
-
-                        ui.UI_ADDRESS = MySqlHelper.EscapeString(JsonConvert.SerializeObject(ad));
-
-                        if(db.InsertUserInfo(ui))
-                        {
-                            string query = string.Format(@"insert into activity_logs(ACT_DESCRIPTION, ACT_UACC_ID, ACT_UNAME)
-                                            select concat('User ', UI_FNAME, ' ', UI_LNAME, ' Register'), {0}, '{1}' from user_info
-                                            where UI_ID={2};", ui.UI_ID, ui.UI_FNAME + " " + ui.UI_LNAME, ui.UI_ID);
-
-
-                            bool logs = db.InsertToUserLogs(query);
-                            if (logs)
-                            {
-                                Response.Write("<script>alert('Register Successful. Proceed with Login')</script>");
-                                Response.Redirect("~/Default.aspx");
-                            }
-                        }
-                        break;
-                }
+                
+                
             }
         }
 
